@@ -1,0 +1,163 @@
+service: $${self:custom.name}
+
+plugins:
+  - serverless-webpack
+  - serverless-dotenv-plugin
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: $${self:custom.stage}
+  region: $${self:custom.region}
+  profile: $${self:custom.profile}
+  trace:
+    apiGateway: true
+  timeout: 30
+  memorySize: 256
+  # This syntax requires serverless variables to defined by $${} so that we can use AWS psudeo variables
+  variableSyntax: "\\$\\${([ ~:a-zA-Z0-9._\\'\",\\-\\/\\(\\)]+?)}"
+  apiKeys:
+    - $${self:custom.stagedName}-key
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - ssm:GetParameter
+      Resource:
+        - Fn::Sub: 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${MailgunApiBaseUrl}'
+        - Fn::Sub: 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${MailgunApiDomain}'
+        - Fn::Sub: 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${MailgunApiKey}'
+        - Fn::Sub: 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SendgridApiBaseUrl}'
+        - Fn::Sub: 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SendgridApiKey}'
+    - Effect: 'Allow' #  Required AWS X-RAY permissions
+      Action:
+        - 'xray:PutTraceSegments'
+        - 'xray:PutTelemetryRecords'
+      Resource:
+        - '*'
+  environment:
+    SERVICE_HOST:
+      Fn::Sub: https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/$${self:custom.stage}
+    SERVICE_NAME: $${self:custom.name}
+    STAGE: $${self:custom.stage}
+
+package:
+  individually: true
+
+functions: $${self:custom.functionMap.$${self:custom.stage}}
+
+custom:
+  name: node-mail
+  stage: $${opt:stage, env:STAGE, 'dev'}
+  region: $${opt:region, env:AWS_REGION, 'ap-southeast-2'}
+  profile: $${opt:profile, env:AWS_PROFILE, self:custom.stage}
+  stagedName: $${self:custom.name}-$${self:custom.stage}
+  dotenv:
+    include: []
+  # Uncomment to use custom domain mapping
+  # domain: $${self:custom.domainMap.$${self:custom.stage}}
+  # domainMap:
+  #   dev: dev.api.my-domain.com
+  #   stg: stg.api.my-domain.com
+  #   prd: api.my-domain.com
+  webpack:
+    includeModules:
+      forceExclude: [aws-sdk]
+    webpackConfig: $${self:custom.webpack.webpackConfigMap.$${self:custom.stage}}
+    webpackConfigMap:
+      dev: ./internals/webpack/webpack.dev.config.js
+      stg: ./internals/webpack/webpack.dev.config.js
+      prd: ./internals/webpack/webpack.prod.config.js
+  functions:
+    # API lambda function
+    api: &api
+      handler: src/api-lambda.handler
+      trace: Active
+      events:
+        - http:
+            method: post
+            path: /email
+            private: true
+      environment:
+        SSM_MAILGUN_API_BASE_URL: { Ref: MailgunApiBaseUrl }
+        SSM_MAILGUN_API_DOMAIN: { Ref: MailgunApiDomain }
+        SSM_MAILGUN_API_KEY: { Ref: MailgunApiKey }
+        SSM_SENDGRID_API_BASE_URL: { Ref: SendgridApiBaseUrl }
+        SSM_SENDGRID_API_KEY: { Ref: SendgridApiKey }
+    # API docs lamda function
+    api-docs: &api-docs
+      handler: src/api-docs-lambda.handler
+      role: ApiDocsExecutionRole
+      events:
+        - http: get /docs
+        - http: get /docs/{proxy+}
+  functionMap:
+    dev:
+      api: *api
+      api-docs: *api-docs
+    stg:
+      api: *api
+      api-docs: *api-docs
+    prd:
+      api: *api
+
+resources:
+  Resources:
+    MailgunApiBaseUrl:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Description: Mailgun API base url
+        Name: /$${self:custom.stage}/$${self:custom.name}/mailgun_api_base_url
+        Type: String
+        Value: $${opt:mailgun-api-base-url, env:MAILGUN_API_BASE_URL}
+    MailgunApiDomain:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Description: Mailgun API domain
+        Name: /$${self:custom.stage}/$${self:custom.name}/mailgun_api_domain
+        Type: String
+        Value: $${opt:mailgun-api-domain, env:MAILGUN_API_DOMAIN}
+    MailgunApiKey:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Description: Mailgun API key
+        Name: /$${self:custom.stage}/$${self:custom.name}/mailgun_api_key
+        Type: String
+        Value: $${opt:mailgun-api-key, env:MAILGUN_API_KEY}
+    SendgridApiBaseUrl:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Description: Sendgrid API base url
+        Name: /$${self:custom.stage}/$${self:custom.name}/sendgrid_api_base_url
+        Type: String
+        Value: $${opt:sendgrid-api-base-url, env:SENDGRID_API_BASE_URL}
+    SendgridApiKey:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Description: Sendgrid API key
+        Name: /$${self:custom.stage}/$${self:custom.name}/sendgrid_api_key
+        Type: String
+        Value: $${opt:sendgrid-api-key, env:SENDGRID_API_KEY}
+    # # Uncomment to use custom domain mapping
+    # ApiGatewayMapping:
+    #   Type: AWS::ApiGateway::BasePathMapping
+    #   Properties:
+    #     BasePath: $${self:custom.name}
+    #     DomainName: $${self:custom.domain}
+    #     RestApiId:
+    #       Ref: ApiGatewayRestApi
+    #     Stage: $${self:custom.stage}
+    # IAM execution role isolation for API docs lambda
+    ApiDocsExecutionRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: $${self:custom.stagedName}-api-docs-$${self:custom.region}-lambdaRole
+        AssumeRolePolicyDocument:
+          Version: '2008-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole

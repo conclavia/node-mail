@@ -1,0 +1,107 @@
+paths:
+  /email:
+    post:
+      tags:
+        - Email
+      summary: Send an email message
+      description: >
+        Send an email message to multiple recipients. The service will first use Mailgun to send the message,
+        and if it fails to send, the service will attempt to use Sendgrid. If the message has been accepted by
+        one of the email sender, a message receipt ID will be returned with the 202 response.
+      parameters:
+        - name: x-prefer-sender
+          in: header
+          description: Specify a preferred sender. The default sender is mailgun.
+          schema:
+            type: string
+            enum: [mailgun, sendgrid]
+        - name: x-no-fallback
+          in: header
+          description: Specify whether to skip the fallback sender if the preferred sender fails and return the error instead.
+          schema:
+            type: boolean
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Email'
+      responses:
+        '202':
+          description: The message was accepted by a sender
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  schemas:
+    Email:
+      type: object
+      description: Email message
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [email]
+            attributes:
+              type: object
+              required: [from, to, subject, text]
+              properties:
+                from:
+                  description: Email address for "From" header
+                  example: Joe <joe@host.com>
+                  type: string
+                to:
+                  description: Email address of the recipient(s). You can use commas to separate multiple recipients.
+                  example: Bob <bob@host.com>
+                  type: string
+                cc:
+                  description: Same as To but for Cc
+                  type: string
+                bcc:
+                  description: Same as To but for Bcc
+                  type: string
+                replyTo:
+                  description: Email address for "Reply To" header
+                  type: string
+                subject:
+                  description: Message subject
+                  type: string
+                  example: Hello, world!
+                text:
+                  description: Body of the message. (text version)
+                  type: string
+                  example: I'm using node-mail to send you this message.
+                html:
+                  description: Body of the message. (HTML version)
+                  type: string
+    EmailResponse:
+      type: object
+      description: Email response
+      properties:
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              description: The message receipt ID
+            type:
+              type: string
+              enum: [email-response]
+            attributes:
+              type: object
+              properties:
+                sender:
+                  type: string
+                  description: The sender that accepted the message
+                  example: mailgun
