@@ -16,7 +16,17 @@ export default class EmailService {
   }
 
   async send(email, preferSender = 'mailgun', noFallback = false) {
-    joi.assert(email, Email.constraints.label('email').required());
+    joi.assert(
+      { email, preferSender, noFallback },
+      joi.object({
+        email: Email.constraints.required(),
+        preferSender: joi
+          .string()
+          .valid('mailgun', 'sendgrid')
+          .required(),
+        noFallback: joi.boolean().required(),
+      }),
+    );
 
     try {
       const sender = this.getSender(preferSender);

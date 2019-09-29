@@ -16,4 +16,19 @@ describe('models/email-model', () => {
     const email = new Email(input);
     expect(email).to.eql(input);
   });
+
+  it('empty constructor should initialise empty properties', () => {
+    const input = {
+      from: undefined,
+      to: undefined,
+      cc: undefined,
+      bcc: undefined,
+      replyTo: undefined,
+      subject: undefined,
+      text: undefined,
+      html: undefined,
+    };
+    const email = new Email();
+    expect(email).to.eql(input);
+  });
 });
