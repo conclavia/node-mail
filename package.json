@@ -15,8 +15,12 @@
     "test:unit": "cross-env NODE_ENV=test nyc mocha --recursive test/unit",
     "test:integration": "mocha --require @babel/register --recursive test/integration -r dotenv/config"
   },
-  "author": "Tri Tran <tri.quang.tran@gmail.com>",
-  "license": "nolicence",
+  "repository": {
+    "type": "github",
+    "url": "https://github.com/triqi/node-mail.git"
+  },
+  "author": "Tri Tran <2232035+triqi@users.noreply.github.com>",
+  "license": "MIT",
   "devDependencies": {
     "@babel/cli": "^7.0.0",
     "@babel/core": "^7.0.0",
