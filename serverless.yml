@@ -23,17 +23,17 @@ provider:
       Action:
         - ssm:GetParameter
       Resource:
-        - Fn::Sub: 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${MailgunApiBaseUrl}'
-        - Fn::Sub: 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${MailgunApiDomain}'
-        - Fn::Sub: 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${MailgunApiKey}'
-        - Fn::Sub: 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SendgridApiBaseUrl}'
-        - Fn::Sub: 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SendgridApiKey}'
-    - Effect: 'Allow' #  Required AWS X-RAY permissions
+        - Fn::Sub: "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${MailgunApiBaseUrl}"
+        - Fn::Sub: "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${MailgunApiDomain}"
+        - Fn::Sub: "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${MailgunApiKey}"
+        - Fn::Sub: "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SendgridApiBaseUrl}"
+        - Fn::Sub: "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SendgridApiKey}"
+    - Effect: "Allow" #  Required AWS X-RAY permissions
       Action:
-        - 'xray:PutTraceSegments'
-        - 'xray:PutTelemetryRecords'
+        - "xray:PutTraceSegments"
+        - "xray:PutTelemetryRecords"
       Resource:
-        - '*'
+        - "*"
   environment:
     SERVICE_HOST:
       Fn::Sub: https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/$${self:custom.stage}
@@ -152,7 +152,7 @@ resources:
       Properties:
         RoleName: $${self:custom.stagedName}-api-docs-$${self:custom.region}-lambdaRole
         AssumeRolePolicyDocument:
-          Version: '2008-10-17'
+          Version: "2008-10-17"
           Statement:
             - Effect: Allow
               Principal:
