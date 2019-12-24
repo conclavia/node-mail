@@ -1,5 +1,5 @@
 {
   "plugins": ["@babel/plugin-proposal-object-rest-spread", "@babel/plugin-transform-async-to-generator"],
   "env": { "test": { "plugins": ["istanbul"] } },
-  "presets": [["@babel/preset-env", { "targets": { "node": "8.10" } }]]
+  "presets": [["@babel/preset-env", { "targets": { "node": "12.14.0" } }]]
 }
